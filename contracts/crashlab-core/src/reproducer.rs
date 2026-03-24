@@ -128,6 +128,7 @@ mod tests {
         CrashSignature {
             category: "runtime-failure",
             digest: 0xDEAD_BEEF,
+            signature_hash: 0xDEAD_BEEF_CAFE_0000,
         }
     }
 

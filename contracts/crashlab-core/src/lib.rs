@@ -14,6 +14,27 @@ pub struct CaseSeed {
 pub struct CrashSignature {
     pub category: &'static str,
     pub digest: u64,
+    /// Stable hash derived solely from `category` and payload bytes.
+    ///
+    /// Two failures are considered equivalent when their `signature_hash` values
+    /// are equal, regardless of which seed produced them.
+    pub signature_hash: u64,
+}
+
+/// Computes a stable FNV-1a 64-bit hash from `category` and `payload`.
+///
+/// The hash is deterministic and independent of any seed ID, so equivalent
+/// failures always produce the same value.
+pub fn compute_signature_hash(category: &str, payload: &[u8]) -> u64 {
+    const FNV_OFFSET: u64 = 14695981039346656037;
+    const FNV_PRIME: u64 = 1099511628211;
+
+    let mut hash = FNV_OFFSET;
+    for byte in category.as_bytes().iter().chain(payload.iter()) {
+        hash ^= *byte as u64;
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+    hash
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,7 +75,9 @@ pub fn classify(seed: &CaseSeed) -> CrashSignature {
         "runtime-failure"
     };
 
-    CrashSignature { category, digest }
+    let signature_hash = compute_signature_hash(category, &seed.payload);
+
+    CrashSignature { category, digest, signature_hash }
 }
 
 pub fn to_bundle(seed: CaseSeed) -> CaseBundle {
@@ -99,5 +122,41 @@ mod tests {
         };
         let bundle = to_bundle(seed);
         assert!(!bundle.signature.category.is_empty());
+    }
+
+    // ── signature_hash stability ──────────────────────────────────────────────
+
+    #[test]
+    fn equivalent_failures_produce_identical_signature_hash() {
+        // Same payload, different seed IDs → same signature_hash.
+        let seed_a = CaseSeed { id: 1, payload: vec![1, 2, 3] };
+        let seed_b = CaseSeed { id: 99, payload: vec![1, 2, 3] };
+        let sig_a = classify(&seed_a);
+        let sig_b = classify(&seed_b);
+        assert_eq!(sig_a.category, sig_b.category);
+        assert_eq!(sig_a.signature_hash, sig_b.signature_hash);
+    }
+
+    #[test]
+    fn signature_hash_differs_across_categories() {
+        let empty = CaseSeed { id: 0, payload: vec![] };
+        let normal = CaseSeed { id: 0, payload: vec![1] };
+        let sig_empty = classify(&empty);
+        let sig_normal = classify(&normal);
+        assert_ne!(sig_empty.signature_hash, sig_normal.signature_hash);
+    }
+
+    #[test]
+    fn signature_hash_is_deterministic() {
+        let hash_a = compute_signature_hash("runtime-failure", &[10, 20, 30]);
+        let hash_b = compute_signature_hash("runtime-failure", &[10, 20, 30]);
+        assert_eq!(hash_a, hash_b);
+    }
+
+    #[test]
+    fn different_payloads_produce_different_signature_hash() {
+        let hash_a = compute_signature_hash("runtime-failure", &[1, 2, 3]);
+        let hash_b = compute_signature_hash("runtime-failure", &[3, 2, 1]);
+        assert_ne!(hash_a, hash_b);
     }
 }
