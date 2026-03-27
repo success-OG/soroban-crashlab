@@ -1,4 +1,23 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
 export default function Home() {
+  const [showOnboarding, setShowOnboarding] = useState(true);
+
+  // Load onboarding dismissal state from localStorage
+  useEffect(() => {
+    const dismissed = localStorage.getItem('onboarding-dismissed');
+    if (dismissed === 'true') {
+      setShowOnboarding(false);
+    }
+  }, []);
+
+  const handleDismissOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem('onboarding-dismissed', 'true');
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-20 px-8 max-w-5xl mx-auto w-full">
       <div className="text-center max-w-3xl mb-16">
@@ -6,9 +25,96 @@ export default function Home() {
           Bulletproof Your Soroban Smart Contracts
         </h1>
         <p className="text-xl leading-8 text-zinc-600 dark:text-zinc-400">
-          An advanced fuzzing and mutation testing framework designed to discover elusive edge cases in Stellar's Soroban ecosystem.
+          An advanced fuzzing and mutation testing framework designed to discover elusive edge cases in Stellar&apos;s Soroban ecosystem.
         </p>
       </div>
+
+      {/* Onboarding Cards */}
+      {showOnboarding && (
+        <div className="w-full max-w-5xl mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Get Started with CrashLab</h2>
+              <p className="text-zinc-600 dark:text-zinc-400">No campaigns yet. Follow these steps to start fuzzing your Soroban contracts.</p>
+            </div>
+            <button
+              onClick={handleDismissOnboarding}
+              className="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition"
+              aria-label="Dismiss onboarding"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Create Campaign */}
+            <div className="border border-blue-200 dark:border-blue-800 rounded-xl p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-lg bg-blue-600 dark:bg-blue-500 flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Create Your First Campaign</h3>
+              </div>
+              <p className="text-sm text-blue-800 dark:text-blue-200 mb-4">
+                Set up a fuzzing campaign to start testing your smart contracts for edge cases and vulnerabilities.
+              </p>
+              <button className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                Create Campaign
+              </button>
+            </div>
+
+            {/* Card 2: Read Docs */}
+            <div className="border border-purple-200 dark:border-purple-800 rounded-xl p-6 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-lg bg-purple-600 dark:bg-purple-500 flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-purple-900 dark:text-purple-100">Read the Documentation</h3>
+              </div>
+              <p className="text-sm text-purple-800 dark:text-purple-200 mb-4">
+                Learn how to configure campaigns, write invariants, and interpret fuzzing results.
+              </p>
+              <a
+                href="https://github.com/SorobanCrashLab/soroban-crashlab#readme"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition text-center"
+              >
+                View Docs
+              </a>
+            </div>
+
+            {/* Card 3: View Examples */}
+            <div className="border border-green-200 dark:border-green-800 rounded-xl p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-lg bg-green-600 dark:bg-green-500 flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">View Examples</h3>
+              </div>
+              <p className="text-sm text-green-800 dark:text-green-200 mb-4">
+                Explore example contracts and campaigns to understand best practices and common patterns.
+              </p>
+              <a
+                href="https://github.com/SorobanCrashLab/soroban-crashlab/tree/main/contracts"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition text-center"
+              >
+                Browse Examples
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
         {/* Card 1 */}
