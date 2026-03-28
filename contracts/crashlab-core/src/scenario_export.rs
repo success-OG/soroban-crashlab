@@ -76,6 +76,8 @@ pub fn export_scenario_json(
 /// that consecutive exports of the same bundle set always produce byte-identical
 /// output regardless of the order in which bundles were collected.
 ///
+/// Reload and execute with [`crate::regression_suite::run_regression_suite_from_json`].
+///
 /// # Example
 ///
 /// ```rust

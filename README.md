@@ -18,7 +18,7 @@ To report a vulnerability, see our [Security Policy](.github/SECURITY.md). Do no
 ## Repository structure
 
 - `apps/web`: Next.js frontend dashboard for runs, failures, and replay output
-- `contracts/crashlab-core`: Rust crate for core fuzzing and reproducible case generation
+- `contracts/crashlab-core`: Rust crate for core fuzzing and reproducible case generation (`export_suite_json` / `run_regression_suite_from_json` for JSON regression packs)
 - `docs/`: project documentation
   - [`ARCHITECTURE.md`](docs/ARCHITECTURE.md): system architecture and data flow
   - [`REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md): deterministic guarantees and troubleshooting

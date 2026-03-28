@@ -83,6 +83,12 @@ pub use scenario_export::{
     export_scenario_json, export_suite_json,
 };
 
+pub mod regression_suite;
+pub use regression_suite::{
+    RegressionCaseResult, RegressionSuiteSummary, load_regression_suite_json,
+    run_regression_suite, run_regression_suite_from_json,
+};
+
 pub mod regression_grouping;
 pub use regression_grouping::{
     RegressionGroupKey, export_rust_regression_suite, group_bundles_by_regression_group,
