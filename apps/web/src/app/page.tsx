@@ -37,6 +37,7 @@ import AddRunStatusTimeline from './add-run-status-timeline';
 import AddExportRunJson from './add-export-run-json';
 import AddExportRunCsv from './add-export-run-csv';
 import IntegrateWebhookManagerForRunEvents from './integrate-webhook-manager-for-run-events';
+import AddAccessibleKeyboardNavBlueprint from './add-accessible-keyboard-nav-blueprint';
 
 // Mock data for demonstration
 const MOCK_RUNS: FuzzingRun[] = Array.from({ length: 25 }, (_, i) => ({
@@ -320,7 +321,9 @@ function HomeContent() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-8 max-w-5xl mx-auto w-full">
+    <div className="min-h-screen w-full">
+      <AddAccessibleKeyboardNavBlueprint />
+      <div id="main-content" className="flex flex-col items-center justify-center py-20 px-8 max-w-5xl mx-auto w-full">
       {/* Role toggle */}
       <div className="w-full flex justify-end mb-6">
         <MaintainerToggle
@@ -827,6 +830,7 @@ function HomeContent() {
             Star the Repo
           </a>
         </div>
+      </div>
       </div>
     </div>
   );
