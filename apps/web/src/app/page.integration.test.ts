@@ -94,6 +94,42 @@ describe("Requirement 7.1 — RunClusterOverview receives full unfiltered runs",
   });
 });
 
+describe("Requirement #499 — Live milestone timeline cross-module regression", () => {
+  it("selects unseen runs incrementally in deterministic order", () => {
+    const runs = sortRunsForTimeline(buildMockRuns().slice(0, 4));
+    const seen: string[] = [];
+
+    const first = selectNextUnseenRun(runs, seen);
+    expect(first?.id).toBe(runs[0].id);
+    seen.push(first!.id);
+
+    const second = selectNextUnseenRun(runs, seen);
+    expect(second?.id).toBe(runs[1].id);
+  });
+
+  it("maps replay placeholder runs into run_update timeline events", () => {
+    const replayRun = createReplayPlaceholderRun({
+      id: "run-replay-007",
+      status: "running",
+    });
+    const runs = sortRunsForTimeline([
+      ...buildMockRuns().slice(0, 3),
+      replayRun,
+    ]);
+
+    const selected = selectNextUnseenRun(
+      runs,
+      runs.filter((run) => run.id !== replayRun.id).map((run) => run.id),
+    );
+
+    const event = buildRunProgressEvent(selected!, new Set());
+
+    expect(selected?.id).toBe(replayRun.id);
+    expect(event.type).toBe("run_update");
+    expect(event.label).toBe("Run queued");
+  });
+});
+
 /**
  * Integration test: loading state shows skeleton, not RunClusterOverview
  *

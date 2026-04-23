@@ -1,94 +1,89 @@
-# feat: improve runtime replay and retention controls
+# feat: Add live run progress timeline
 
-Closes #428
-Closes #429
-Closes #430
-Closes #431
+Closes #499
 
 ## Summary
 
-This PR improves the Wave 4 runtime reliability surface in `crashlab-core` by:
+Implements a deterministic live run progress timeline for the dashboard that incrementally streams campaign milestone and failure discovery events from shared `FuzzingRun` data, with explicit loading/error states, pause/resume markers, and responsive/keyboard-accessible controls.
 
-- adding stable failure classification resolution for replay and taxonomy reporting,
-- wiring single-seed replay through shared bundle persistence and the main CLI,
-- adding configurable time-based retention for run artifacts,
-- and making stale-run detection easier to verify deterministically.
+## What changed
 
-The implementation stays compatible with replay, bundle persistence, and health-oriented runtime flows by preserving legacy persisted bundle signatures while surfacing stable taxonomy classes during replay.
+### `apps/web/src/app/campaign-milestone-timeline-55.tsx`
 
-## What Changed
+- Replaced random simulated timeline generation with run-driven incremental updates.
+- Added explicit `dataState` handling (`loading`, `error`, `success`) with dedicated UI states.
+- Added retry wiring for timeline stream failures.
+- Added pause/resume marker insertion in the event feed.
+- Added `aria-live` event log semantics and `aria-pressed` control states for accessibility.
+- Preserved responsive layout behavior for controls and event summary row.
 
-### Failure classification taxonomy
+### `apps/web/src/app/campaign-milestone-timeline-utils.ts` (new)
 
-- added `stable_failure_class_for_bundle` so persisted bundles can resolve to stable classes such as `auth`, `budget`, `state`, and `xdr`,
-- kept backward compatibility for legacy bundles that still store `signature.category = "runtime-failure"`,
-- documented and tested the stable class mapping behavior.
+- Added pure utility layer for deterministic, testable timeline behavior:
+  - `sortRunsForTimeline(runs)`
+  - `buildCampaignLifecycleEvent(campaignId, type)`
+  - `buildRunProgressEvent(run, knownSignatures)`
+  - `selectNextUnseenRun(runs, seenRunIds)`
+  - `prependCappedEvent(events, event, maxEventsDisplayed)`
+- Added shared `MilestoneEvent` / `MilestoneEventType` contracts for module coordination.
 
-### Replay single seed
+### `apps/web/src/app/page.tsx`
 
-- expanded replay logic into shared helpers in `replay.rs`,
-- added replay result fields for stable class matching alongside signature matching,
-- routed `replay-single-seed` through the shared persistence/replay path,
-- added `crashlab replay seed <bundle-json-path>` to the main CLI,
-- ensured replay output is deterministic and explicit about class/category/digest/signature hash.
+- Wired `CampaignMilestoneTimeline` to dashboard state contracts:
+  - `runs={runs}`
+  - `dataState={dataState}`
+  - `onRetry={() => setFetchAttempt((n) => n + 1)}`
+  - explicit timeline `errorMessage`
 
-### Run artifact retention
+### `apps/web/src/app/campaign-milestone-timeline-utils.test.ts` (new)
 
-- extended `RetentionPolicy` with retention windows for failures and checkpoints,
-- added `RetentionRecord<T>` to support time-aware pruning,
-- preserved existing count-based retention helpers,
-- added behavior to keep the latest failures pinned while pruning older non-critical artifacts.
+- Added unit tests for:
+  - run sorting order
+  - failure event mapping and re-observed signature behavior
+  - unseen-run incremental selection
+  - capped prepend behavior
+- Added integration/regression path that validates replay placeholder runs map into timeline `run_update` events.
 
-### Stale run detector
+### `apps/web/src/app/page.integration.test.ts`
 
-- added `check_with_elapsed()` for deterministic validation without sleep-heavy tests,
-- preserved `check()` for live runtime polling,
-- kept recovery hints surfaced through `StaleStatus::Stale`.
+- Added cross-module regression coverage for issue #499:
+  - deterministic unseen-run progression
+  - replay placeholder (`replay-ui-utils`) → timeline event mapping
 
-### Runtime control cleanup
+## Design note
 
-- fixed a pre-existing `run_control.rs` compile break and aligned it with the shared `worker_partition` API so the runtime crate builds and tests cleanly again.
+**Tradeoff**: Timeline updates are generated from existing in-memory run data and emitted incrementally at a configurable interval instead of opening a backend stream in this issue.
+
+**Alternative considered**: Introduce websocket/SSE-backed timeline transport now. Deferred to follow-up to keep issue scope focused on UI behavior and shared type integration.
+
+**Rollback path**: Revert this commit to restore previous timeline rendering behavior and remove utility-based event generation.
 
 ## Validation
 
-Primary:
-
 ```bash
-cd contracts/crashlab-core
-cargo test --all-targets
+cd apps/web && npx jest src/app/campaign-milestone-timeline-utils.test.ts src/app/page.integration.test.ts --no-cache
 ```
 
-Observed result:
-
-- `343` library tests passed
-- `4` `import-corpus` binary tests passed
-- `2` `replay-single-seed` binary tests passed
-
-Secondary targeted checks maintainers can use:
+- ✅ 28/28 tests passing
 
 ```bash
-cd contracts/crashlab-core
-cargo test replay::
-cargo test retention::
-cargo test stale_detector::
-cargo test --bin replay-single-seed
+cd apps/web && npm run lint
 ```
 
-## Reviewer Notes
+- ⚠ Fails due to pre-existing unrelated baseline issues (e.g. `integrate-sentry-integration-for-crash-reporting.tsx` and pre-existing `page.tsx` memoization dependency warning)
 
-- replay remains compatible with persisted legacy bundles that store `"runtime-failure"` as the signature category,
-- stable taxonomy classes are resolved during replay instead of rewriting old artifact data,
-- retention behavior is now reproducible from explicit timestamps and windows instead of manual guesswork,
-- stale detection behavior can be verified deterministically with explicit elapsed durations.
+```bash
+cd apps/web && npm run build
+```
 
-## Files Changed
+- ⚠ Fails due to pre-existing unrelated baseline TypeScript error in `add-accessible-keyboard-nav-blueprint-page-49.tsx:253` (`handleReset` not defined)
 
-- `contracts/crashlab-core/src/taxonomy.rs`
-- `contracts/crashlab-core/src/replay.rs`
-- `contracts/crashlab-core/src/bin/replay-single-seed.rs`
-- `contracts/crashlab-core/src/bin/crashlab.rs`
-- `contracts/crashlab-core/src/retention.rs`
-- `contracts/crashlab-core/src/stale_detector.rs`
-- `contracts/crashlab-core/src/run_control.rs`
-- `contracts/crashlab-core/src/lib.rs`
-- `README.md`
+## Checklist
+
+- [x] Timeline updates incrementally and supports pause/resume markers
+- [x] Explicit loading/error timeline states implemented with retry affordance
+- [x] Keyboard accessibility preserved for timeline controls and event feed focus
+- [x] Responsive behavior preserved for controls and event metadata layout
+- [x] Unit tests added for primary utility logic and edge behavior
+- [x] Integration/regression coverage added for cross-module replay-to-timeline flow
+- [x] Existing behavior outside issue scope preserved
