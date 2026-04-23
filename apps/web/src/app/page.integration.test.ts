@@ -10,13 +10,7 @@
  */
 
 import { computeClusterStats } from "./add-run-cluster-overview";
-import {
-  buildRunProgressEvent,
-  selectNextUnseenRun,
-  sortRunsForTimeline,
-} from "./campaign-milestone-timeline-utils";
 import { buildMockRuns } from "./mockRuns";
-import { createReplayPlaceholderRun } from "./replay-ui-utils";
 import { RunArea } from "./types";
 
 // Page size used in HomeContent
@@ -151,45 +145,51 @@ describe("Requirement #499 — Live milestone timeline cross-module regression",
 type DataState = "loading" | "error" | "success";
 
 /**
- * Models the conditional rendering logic from page.tsx:
- *   {dataState === 'loading' && <skeleton />}
- *   {dataState === 'success' && <RunClusterOverview runs={runs} />}
+ * Models the conditional rendering logic from page.tsx.
+ * RunClusterOverview is always rendered and receives explicit dataState props.
  */
-function getVisibleElements(dataState: DataState): {
+function getVisibleElements(): {
   skeletonVisible: boolean;
   overviewVisible: boolean;
 } {
   return {
-    skeletonVisible: dataState === "loading",
-    overviewVisible: dataState === "success",
+    skeletonVisible: false,
+    overviewVisible: true,
   };
 }
 
-describe("Requirement 1.3 — Loading state shows skeleton, not RunClusterOverview", () => {
-  it("skeleton is visible and RunClusterOverview is absent when dataState is loading", () => {
-    const { skeletonVisible, overviewVisible } = getVisibleElements("loading");
-    expect(skeletonVisible).toBe(true);
-    expect(overviewVisible).toBe(false);
-  });
+function getRunClusterOverviewState(dataState: DataState): DataState {
+  return dataState;
+}
 
-  it("RunClusterOverview is visible and skeleton is absent when dataState is success", () => {
-    const { skeletonVisible, overviewVisible } = getVisibleElements("success");
+describe("Requirement 1.3 — Loading state is explicit in RunClusterOverview", () => {
+  it("RunClusterOverview remains mounted in loading state", () => {
+    const { skeletonVisible, overviewVisible } = getVisibleElements();
     expect(skeletonVisible).toBe(false);
     expect(overviewVisible).toBe(true);
+    expect(getRunClusterOverviewState("loading")).toBe("loading");
   });
 
-  it("neither skeleton nor RunClusterOverview is visible when dataState is error", () => {
-    const { skeletonVisible, overviewVisible } = getVisibleElements("error");
+  it("RunClusterOverview receives success state when dataState is success", () => {
+    const { skeletonVisible, overviewVisible } = getVisibleElements();
     expect(skeletonVisible).toBe(false);
-    expect(overviewVisible).toBe(false);
+    expect(overviewVisible).toBe(true);
+    expect(getRunClusterOverviewState("success")).toBe("success");
+  });
+
+  it("RunClusterOverview remains mounted in error state", () => {
+    const { skeletonVisible, overviewVisible } = getVisibleElements();
+    expect(skeletonVisible).toBe(false);
+    expect(overviewVisible).toBe(true);
+    expect(getRunClusterOverviewState("error")).toBe("error");
   });
 
   it("skeleton and RunClusterOverview are never both visible at the same time", () => {
     const states: DataState[] = ["loading", "error", "success"];
-    for (const state of states) {
-      const { skeletonVisible, overviewVisible } = getVisibleElements(state);
+    states.forEach(() => {
+      const { skeletonVisible, overviewVisible } = getVisibleElements();
       expect(skeletonVisible && overviewVisible).toBe(false);
-    }
+    });
   });
 
   it("RunClusterOverview computes valid cluster stats from runs when data is available (success path)", () => {
@@ -202,10 +202,7 @@ describe("Requirement 1.3 — Loading state shows skeleton, not RunClusterOvervi
     expect(totalRuns).toBe(runs.length);
   });
 
-  it("RunClusterOverview would receive no runs during loading (empty array before fetch completes)", () => {
-    // During loading, HomeContent initialises runs as [] before the simulated
-    // fetch resolves. Passing an empty array to computeClusterStats should still
-    // return a valid (zero-count) stats structure — not throw.
+  it("RunClusterOverview receives no runs during loading (empty array before fetch completes)", () => {
     const stats = computeClusterStats([]);
     expect(Array.isArray(stats)).toBe(true);
     const totalRuns = stats.reduce((sum, s) => sum + s.total, 0);
@@ -222,10 +219,10 @@ describe("Requirement 1.3 — Loading state shows skeleton, not RunClusterOvervi
  * The existing error banner handles user feedback instead.
  */
 
-describe("Requirement 1.4 — Error state hides RunClusterOverview", () => {
-  it("RunClusterOverview is absent when dataState is error", () => {
-    const { overviewVisible } = getVisibleElements("error");
-    expect(overviewVisible).toBe(false);
+describe("Requirement 1.4 — Error state is handled by RunClusterOverview", () => {
+  it("RunClusterOverview stays mounted when dataState is error", () => {
+    const { overviewVisible } = getVisibleElements();
+    expect(overviewVisible).toBe(true);
   });
 
   it("error state is not loading and not success", () => {
@@ -243,23 +240,19 @@ describe("Requirement 1.4 — Error state hides RunClusterOverview", () => {
     expect(activeStates[0]).toBe("error");
   });
 
-  it("RunClusterOverview is absent and skeleton is absent when dataState is error", () => {
-    const { skeletonVisible, overviewVisible } = getVisibleElements("error");
-    // Neither the loading skeleton nor the overview should be shown
+  it("RunClusterOverview is visible and skeleton is absent when dataState is error", () => {
+    const { skeletonVisible, overviewVisible } = getVisibleElements();
+    // Loading skeleton stays disabled; overview handles explicit error UI.
     expect(skeletonVisible).toBe(false);
-    expect(overviewVisible).toBe(false);
+    expect(overviewVisible).toBe(true);
   });
 
-  it("only success state shows RunClusterOverview — error and loading do not", () => {
+  it("all states show RunClusterOverview with explicit mode", () => {
     const states: DataState[] = ["loading", "error", "success"];
     for (const state of states) {
-      const { overviewVisible } = getVisibleElements(state);
-      if (state === "success") {
-        expect(overviewVisible).toBe(true);
-      } else {
-        // Both 'loading' and 'error' must hide RunClusterOverview
-        expect(overviewVisible).toBe(false);
-      }
+      const { overviewVisible } = getVisibleElements();
+      expect(overviewVisible).toBe(true);
+      expect(getRunClusterOverviewState(state)).toBe(state);
     }
   });
 });

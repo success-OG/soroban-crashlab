@@ -214,7 +214,7 @@ function HomeContent() {
       }
       return true;
     });
-  }, [runs, statusFilter, expensiveOnly]);
+  }, [runs, statusFilter, severityFilter, expensiveOnly]);
   const stableQueryString = useMemo(
     () => toStableQueryString(new URLSearchParams(searchParams.toString())),
     [searchParams],
@@ -609,10 +609,12 @@ function HomeContent() {
             </>
           )}
 
-          {dataState === "loading" && (
-            <div className="w-full h-48 rounded-xl bg-zinc-100 dark:bg-zinc-800 animate-pulse mb-6" />
-          )}
-          {dataState === "success" && <RunClusterOverview runs={runs} />}
+          <RunClusterOverview
+            runs={runs}
+            dataState={dataState}
+            onRetry={() => setFetchAttempt((n) => n + 1)}
+            errorMessage="Run cluster diagnostics are temporarily unavailable."
+          />
 
           <div id="recent-runs" className="w-full mb-8 scroll-mt-8">
             <div className="flex items-center justify-between mb-6">
